@@ -6,19 +6,21 @@ export interface CropBounds {
   completeness: number;
 }
 
+export const RANKING_ROW_ASPECT_RATIO = 5.05;
+
 export function getRankingRowBounds(imageWidth: number, imageHeight: number, topEdgeScores?: ArrayLike<number>): CropBounds[] {
   if (imageWidth < 1 || imageHeight < 1) return [];
   const landscapeGameScreen = imageWidth / imageHeight >= 1.45;
   const ultraWideGameScreen = imageWidth / imageHeight >= 2;
   const x = landscapeGameScreen ? imageWidth * 0.451 : imageWidth * 0.035;
-  const width = imageWidth * (ultraWideGameScreen ? 0.42 : landscapeGameScreen ? 0.499 : 0.93);
   const firstY = imageHeight * (ultraWideGameScreen ? 0.16 : landscapeGameScreen ? 0.134 : 0.025);
   const rowStep = imageHeight * (ultraWideGameScreen ? 0.19 : 0.2);
   const visibleBottom = imageHeight * (ultraWideGameScreen ? 0.83 : landscapeGameScreen ? 0.866 : 0.99);
   const rows: CropBounds[] = [];
   const alignment = topEdgeScores ? findAlignedFirstRow(firstY, rowStep, visibleBottom, imageHeight, topEdgeScores) : { y: firstY, step: rowStep };
   if (!alignment) return [];
-  const alignedRowHeight = alignment.step * (landscapeGameScreen ? 0.89 : 0.95);
+  const alignedRowHeight = alignment.step * (landscapeGameScreen ? 0.88 : 0.95);
+  const width = Math.min(alignedRowHeight * RANKING_ROW_ASPECT_RATIO, imageWidth - x);
 
   for (let index = 0; index < 30; index += 1) {
     const y = alignment.y + index * alignment.step;

@@ -1,4 +1,4 @@
-import { cardSimilarity, getHorizontalCardTopEdgeScores, getRankingRowBounds, isRankingCardPixels, makeCardSignature } from './detection/rankingRowDetector';
+import { cardSimilarity, getHorizontalCardTopEdgeScores, getRankingRowBounds, isRankingCardPixels, makeCardSignature, RANKING_ROW_ASPECT_RATIO } from './detection/rankingRowDetector';
 import { canvasToPng, composeRanking } from './compose/compositor';
 import { formatCaptureDate, parseImageDate } from './datetime/imageDateParser';
 import { shouldPreferDuplicate } from './ranking/duplicateResolver';
@@ -206,7 +206,11 @@ export function startApp(root: HTMLElement): void {
       const landscapeGameScreen = image.naturalWidth / image.naturalHeight >= 1.45;
       const ultraWideGameScreen = image.naturalWidth / image.naturalHeight >= 2;
       const sampleX = image.naturalWidth * (landscapeGameScreen ? 0.451 : 0.035);
-      const sampleWidth = image.naturalWidth * (ultraWideGameScreen ? 0.42 : landscapeGameScreen ? 0.499 : 0.93);
+      const estimatedRowStep = image.naturalHeight * (ultraWideGameScreen ? 0.19 : 0.2);
+      const estimatedRowHeight = estimatedRowStep * (landscapeGameScreen ? 0.88 : 0.95);
+      const sampleWidth = landscapeGameScreen
+        ? Math.min(image.naturalWidth - sampleX, estimatedRowHeight * RANKING_ROW_ASPECT_RATIO)
+        : image.naturalWidth * 0.93;
       const edgeCanvas = document.createElement('canvas');
       edgeCanvas.width = 160;
       edgeCanvas.height = image.naturalHeight;

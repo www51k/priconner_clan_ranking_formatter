@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cardSimilarity, getHorizontalCardTopEdgeScores, getRankingRowBounds, isRankingCardPixels } from '../src/detection/rankingRowDetector';
+import { cardSimilarity, getHorizontalCardTopEdgeScores, getRankingRowBounds, isRankingCardPixels, RANKING_ROW_ASPECT_RATIO } from '../src/detection/rankingRowDetector';
 
 describe('ranking row detection helpers', () => {
   it('finds only complete normalized card rows on a 16:9 game screenshot', () => {
@@ -7,7 +7,7 @@ describe('ranking row detection helpers', () => {
     expect(rows).toHaveLength(3);
     expect(rows[0].x).toBeCloseTo(601.6, 0);
     expect(rows[0].y).toBeCloseTo(100.5, 0);
-    expect(rows[0].width).toBeCloseTo(665.7, 0);
+    expect(rows[0].width / rows[0].height).toBeCloseTo(RANKING_ROW_ASPECT_RATIO, 2);
     expect(rows[0].completeness).toBe(1);
   });
 
@@ -45,7 +45,7 @@ describe('ranking row detection helpers', () => {
     const rows = getRankingRowBounds(2736, height, scores);
     expect(rows).toHaveLength(3);
     expect(rows[0].x).toBeCloseTo(1233.9, 0);
-    expect(rows[0].width).toBeCloseTo(1149.1, 0);
+    expect(rows[0].width / rows[0].height).toBeCloseTo(RANKING_ROW_ASPECT_RATIO, 2);
     expect(rows[0].y).toBe(210);
     expect(rows[1].y).toBeCloseTo(450, 0);
   });
@@ -53,7 +53,8 @@ describe('ranking row detection helpers', () => {
   it('uses full-width row bounds for ranking-only crops', () => {
     const rows = getRankingRowBounds(700, 700);
     expect(rows[0].x).toBeCloseTo(24.5);
-    expect(rows[0].width).toBeCloseTo(651);
+    expect(rows[0].width / rows[0].height).toBeCloseTo(RANKING_ROW_ASPECT_RATIO, 2);
+    expect(rows[0].x + rows[0].width).toBeLessThan(700);
     expect(rows.length).toBe(4);
   });
 
