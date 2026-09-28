@@ -1,4 +1,4 @@
-import { cardSimilarity, getRankingRowBounds, isRankingCardPixels, makeCardSignature } from './detection/rankingRowDetector';
+import { cardSimilarity, getHorizontalCardTopEdgeScores, getRankingRowBounds, isRankingCardPixels, makeCardSignature } from './detection/rankingRowDetector';
 import { canvasToPng, composeRanking } from './compose/compositor';
 import { formatCaptureDate, parseImageDate } from './datetime/imageDateParser';
 import { shouldPreferDuplicate } from './ranking/duplicateResolver';
@@ -184,7 +184,22 @@ export function startApp(root: HTMLElement): void {
         failedSources += 1;
         continue;
       }
-      const bounds = getRankingRowBounds(image.naturalWidth, image.naturalHeight);
+      const landscapeGameScreen = image.naturalWidth / image.naturalHeight >= 1.45;
+      const sampleX = image.naturalWidth * (landscapeGameScreen ? 0.451 : 0.035);
+      const sampleWidth = image.naturalWidth * (landscapeGameScreen ? 0.499 : 0.93);
+      const edgeCanvas = document.createElement('canvas');
+      edgeCanvas.width = 160;
+      edgeCanvas.height = image.naturalHeight;
+      const edgeContext = edgeCanvas.getContext('2d', { willReadFrequently: true });
+      if (!edgeContext) {
+        failedSources += 1;
+        continue;
+      }
+      edgeContext.drawImage(image, sampleX, 0, sampleWidth, image.naturalHeight, 0, 0, edgeCanvas.width, edgeCanvas.height);
+      const edgeScores = getHorizontalCardTopEdgeScores(edgeContext.getImageData(0, 0, edgeCanvas.width, edgeCanvas.height).data, edgeCanvas.width, edgeCanvas.height);
+      edgeCanvas.width = 0;
+      edgeCanvas.height = 0;
+      const bounds = getRankingRowBounds(image.naturalWidth, image.naturalHeight, edgeScores);
       let sourceCandidates = 0;
       for (const box of bounds) {
         if (currentGeneration !== generation || nextRank > LAST_RANK) break;
