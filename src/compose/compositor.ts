@@ -1,9 +1,9 @@
 import { LAST_RANK, type RankingEntry } from '../types/ranking';
 
 export const CARD_WIDTH = 520;
-export const CARD_HEIGHT = 150;
-const GAP = 14;
-const PADDING = 24;
+export const CARD_HEIGHT = 104;
+const GAP = 6;
+const PADDING = 10;
 
 export async function composeRanking(entries: ReadonlyMap<number, RankingEntry>): Promise<HTMLCanvasElement> {
   const canvas = document.createElement('canvas');
