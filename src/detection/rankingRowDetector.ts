@@ -9,21 +9,22 @@ export interface CropBounds {
 export function getRankingRowBounds(imageWidth: number, imageHeight: number, topEdgeScores?: ArrayLike<number>): CropBounds[] {
   if (imageWidth < 1 || imageHeight < 1) return [];
   const landscapeGameScreen = imageWidth / imageHeight >= 1.45;
+  const ultraWideGameScreen = imageWidth / imageHeight >= 2;
   const x = landscapeGameScreen ? imageWidth * 0.451 : imageWidth * 0.035;
-  const width = imageWidth * (landscapeGameScreen ? 0.499 : 0.93);
-  const firstY = imageHeight * (landscapeGameScreen ? 0.134 : 0.025);
-  const rowHeight = imageHeight * (landscapeGameScreen ? 0.176 : 0.19);
-  const rowStep = imageHeight * (landscapeGameScreen ? 0.2 : 0.2);
-  const visibleBottom = imageHeight * (landscapeGameScreen ? 0.866 : 0.99);
+  const width = imageWidth * (ultraWideGameScreen ? 0.42 : landscapeGameScreen ? 0.499 : 0.93);
+  const firstY = imageHeight * (ultraWideGameScreen ? 0.16 : landscapeGameScreen ? 0.134 : 0.025);
+  const rowStep = imageHeight * (ultraWideGameScreen ? 0.19 : 0.2);
+  const visibleBottom = imageHeight * (ultraWideGameScreen ? 0.83 : landscapeGameScreen ? 0.866 : 0.99);
   const rows: CropBounds[] = [];
-  const alignedFirstY = topEdgeScores ? findAlignedFirstRow(firstY, rowStep, visibleBottom, topEdgeScores) : firstY;
-  if (alignedFirstY === null) return [];
+  const alignment = topEdgeScores ? findAlignedFirstRow(firstY, rowStep, visibleBottom, imageHeight, topEdgeScores) : { y: firstY, step: rowStep };
+  if (!alignment) return [];
+  const alignedRowHeight = alignment.step * (landscapeGameScreen ? 0.89 : 0.95);
 
   for (let index = 0; index < 30; index += 1) {
-    const y = alignedFirstY + index * rowStep;
-    if (y + rowHeight > visibleBottom) break;
+    const y = alignment.y + index * alignment.step;
+    if (y + alignedRowHeight > visibleBottom) break;
     if (topEdgeScores && topEdgeScores[Math.round(y)] < 0.45) break;
-    rows.push({ x, y, width, height: rowHeight, completeness: 1 });
+    rows.push({ x, y, width, height: alignedRowHeight, completeness: 1 });
   }
   return rows;
 }
@@ -46,27 +47,37 @@ export function getHorizontalCardTopEdgeScores(pixels: Uint8ClampedArray, width:
   return scores;
 }
 
-function findAlignedFirstRow(firstY: number, rowStep: number, visibleBottom: number, edgeScores: ArrayLike<number>): number | null {
-  const minimum = Math.max(1, Math.floor(firstY - rowStep * 0.07));
-  const maximum = Math.min(Math.ceil(firstY + rowStep * 0.55), Math.floor(visibleBottom - rowStep * 1.5));
-  let bestY: number | null = null;
+function findAlignedFirstRow(
+  firstY: number,
+  rowStep: number,
+  visibleBottom: number,
+  imageHeight: number,
+  edgeScores: ArrayLike<number>,
+): { y: number; step: number } | null {
+  const minimum = Math.max(1, Math.floor(firstY - imageHeight * 0.1));
+  const maximum = Math.min(Math.ceil(firstY + imageHeight * 0.1), Math.floor(visibleBottom - rowStep * 1.5));
+  const minimumStep = Math.round(imageHeight * 0.17);
+  const maximumStep = Math.round(imageHeight * 0.21);
+  let best: { y: number; step: number } | null = null;
   let bestScore = 0;
   for (let y = minimum; y <= maximum; y += 1) {
-    const firstScore = edgeScores[y] ?? 0;
-    if (firstScore < 0.45) continue;
-    let score = 0;
-    let count = 0;
-    for (let rowY = y; rowY + rowStep < visibleBottom; rowY += rowStep) {
-      score += edgeScores[Math.round(rowY)] ?? 0;
-      count += 1;
-    }
-    const average = count ? score / count : 0;
-    if (average > bestScore) {
-      bestScore = average;
-      bestY = y;
+    for (let step = minimumStep; step <= maximumStep; step += 1) {
+      if ((edgeScores[y] ?? 0) < 0.45) continue;
+      let score = 0;
+      let count = 0;
+      for (let rowY = y; rowY < visibleBottom; rowY += step) {
+        score += edgeScores[Math.round(rowY)] ?? 0;
+        count += 1;
+      }
+      const average = count >= 2 ? score / count : 0;
+      const priorPenalty = Math.abs(step - rowStep) / imageHeight * 0.1;
+      if (average - priorPenalty > bestScore) {
+        bestScore = average - priorPenalty;
+        best = { y, step };
+      }
     }
   }
-  return bestScore >= 0.45 ? bestY : null;
+  return bestScore >= 0.45 ? best : null;
 }
 
 export function isRankingCardPixels(pixels: Uint8ClampedArray): boolean {

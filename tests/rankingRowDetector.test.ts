@@ -31,6 +31,25 @@ describe('ranking row detection helpers', () => {
     expect(rows[1].y).toBeCloseTo(281, 0);
   });
 
+  it('adjusts crop width and row spacing for ultrawide screenshots', () => {
+    const width = 160;
+    const height = 1260;
+    const pixels = new Uint8ClampedArray(width * height * 4);
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) pixels.set([246, 243, 240, 255], (y * width + x) * 4);
+    }
+    for (const y of [210, 450, 690, 930]) {
+      for (let x = 0; x < width; x += 1) pixels.set([207, 208, 222, 255], (y * width + x) * 4);
+    }
+    const scores = getHorizontalCardTopEdgeScores(pixels, width, height);
+    const rows = getRankingRowBounds(2736, height, scores);
+    expect(rows).toHaveLength(3);
+    expect(rows[0].x).toBeCloseTo(1233.9, 0);
+    expect(rows[0].width).toBeCloseTo(1149.1, 0);
+    expect(rows[0].y).toBe(210);
+    expect(rows[1].y).toBeCloseTo(450, 0);
+  });
+
   it('uses full-width row bounds for ranking-only crops', () => {
     const rows = getRankingRowBounds(700, 700);
     expect(rows[0].x).toBeCloseTo(24.5);

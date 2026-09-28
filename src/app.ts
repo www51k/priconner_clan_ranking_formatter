@@ -204,8 +204,9 @@ export function startApp(root: HTMLElement): void {
         continue;
       }
       const landscapeGameScreen = image.naturalWidth / image.naturalHeight >= 1.45;
+      const ultraWideGameScreen = image.naturalWidth / image.naturalHeight >= 2;
       const sampleX = image.naturalWidth * (landscapeGameScreen ? 0.451 : 0.035);
-      const sampleWidth = image.naturalWidth * (landscapeGameScreen ? 0.499 : 0.93);
+      const sampleWidth = image.naturalWidth * (ultraWideGameScreen ? 0.42 : landscapeGameScreen ? 0.499 : 0.93);
       const edgeCanvas = document.createElement('canvas');
       edgeCanvas.width = 160;
       edgeCanvas.height = image.naturalHeight;
