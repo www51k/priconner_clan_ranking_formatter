@@ -22,7 +22,10 @@ export function startApp(root: HTMLElement): void {
       <section class="panel upload-panel" aria-labelledby="upload-heading">
         <div class="section-heading">
           <div><span class="step">01</span><h2 id="upload-heading">ランキング画像を追加</h2></div>
-          <span class="muted" id="source-count">0枚選択済み</span>
+          <div class="upload-actions">
+            <span class="muted" id="source-count">0枚選択済み</span>
+            <button class="button button-secondary" id="clear-all" type="button" disabled>クリア</button>
+          </div>
         </div>
         <label class="dropzone" id="dropzone" for="file-input">
           <input id="file-input" type="file" accept="image/png,image/jpeg,image/webp" multiple />
@@ -73,6 +76,7 @@ export function startApp(root: HTMLElement): void {
   const missingSummary = query<HTMLDivElement>(root, '#missing-summary');
   const previewWrap = query<HTMLDivElement>(root, '#preview-wrap');
   const downloadButton = query<HTMLButtonElement>(root, '#download');
+  const clearButton = query<HTMLButtonElement>(root, '#clear-all');
   const freshnessStatus = query<HTMLSpanElement>(root, '#freshness-status');
   const freshnessButton = query<HTMLButtonElement>(root, '#check-freshness');
   let generation = 0;
@@ -80,6 +84,7 @@ export function startApp(root: HTMLElement): void {
 
   freshnessButton.addEventListener('click', () => void checkFreshness());
   void checkFreshness();
+  clearButton.addEventListener('click', clearAll);
   input.addEventListener('change', () => {
     if (input.files) void addFiles(input.files);
     input.value = '';
@@ -134,6 +139,7 @@ export function startApp(root: HTMLElement): void {
 
   function renderSources(): void {
     query<HTMLElement>(root, '#source-count').textContent = `${sources.size}枚選択済み`;
+    clearButton.disabled = sources.size === 0;
     sourceList.classList.toggle('empty-note', sources.size === 0);
     if (!sources.size) {
       sourceList.textContent = '追加した画像がここに表示されます。';
@@ -153,6 +159,19 @@ export function startApp(root: HTMLElement): void {
       renderSources();
       void analyzeSources();
     }));
+  }
+
+  function clearAll(): void {
+    generation += 1;
+    previewGeneration += 1;
+    for (const source of sources.values()) URL.revokeObjectURL(source.url);
+    sources.clear();
+    clearEntries();
+    input.value = '';
+    renderSources();
+    renderEntries();
+    void renderPreview();
+    analysisStatus.textContent = 'クリアしました。画像を追加すると自動解析します。';
   }
 
   async function analyzeSources(): Promise<void> {

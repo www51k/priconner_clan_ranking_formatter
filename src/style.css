@@ -16,6 +16,7 @@ h1 { margin: 0; font-size: clamp(26px, 3vw, 36px); letter-spacing: -.04em; line-
 h2 { margin: 0; font-size: 17px; letter-spacing: -.02em; }
 .step { display: grid; place-items: center; width: 27px; height: 27px; color: #6957ce; background: #f0edff; border-radius: 9px; font-size: 11px; font-weight: 700; }
 .muted, .help { color: #808595; font-size: 12px; }
+.upload-actions { display: flex; align-items: center; gap: 10px; }
 .dropzone { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; min-height: 128px; border: 1px dashed #c9c6e3; border-radius: 12px; background: #faf9ff; color: #777c8b; font-size: 12px; cursor: pointer; transition: .18s ease; }
 .dropzone:hover, .dropzone.dragging { border-color: #7967dc; background: #f2efff; }
 .dropzone strong { color: #333448; font-size: 14px; }
@@ -38,6 +39,8 @@ select { min-height: 38px; padding: 0 30px 0 11px; color: #292d3d; border: 1px s
 .button { min-height: 39px; padding: 0 16px; border: 0; border-radius: 9px; font-weight: 600; font-size: 12px; cursor: pointer; transition: .15s ease; }
 .button-primary { color: #fff; background: #6958d0; box-shadow: 0 3px 9px #6553cf28; }
 .button-primary:hover:not(:disabled) { background: #5846c1; transform: translateY(-1px); }
+.button-secondary { min-height: 32px; padding: 0 12px; color: #676d7d; border: 1px solid #e1e3ea; background: #fff; }
+.button-secondary:hover:not(:disabled) { color: #b44e5e; border-color: #edcbd0; background: #fff7f8; }
 .button:disabled { color: #a4a7b0; background: #e9eaf0; box-shadow: none; cursor: not-allowed; }
 .status-line { min-height: 17px; margin: 10px 0 0; color: #797e8e; font-size: 11px; }
 .count-pill { padding: 5px 10px; color: #6252c3; background: #f1efff; border-radius: 99px; font-size: 11px; }
