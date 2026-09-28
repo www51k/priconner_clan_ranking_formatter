@@ -67,7 +67,11 @@ export function startApp(root: HTMLElement): void {
         <p class="help">左列が1〜10位、中央列が11〜20位、右列が21〜30位です。未登録の順位は黒い枠で表示します。</p>
         <div class="preview-wrap" id="preview-wrap"><div class="preview-empty">カードを登録すると30枠のプレビューが表示されます。</div></div>
       </section>
-      <footer>自動検出は未実装です。画像ファイルは外部へ送信されず、解析とPNG生成はブラウザ内で行います。</footer>
+      <footer class="build-info">
+        <span>バージョン ${__APP_VERSION__} · コミット <code>${__APP_COMMIT__}</code> · ${formatBuildTime(__APP_COMMIT_TIME__)}</span>
+        <span class="freshness" id="freshness-status" role="status" aria-live="polite">最新状態を確認中…</span>
+        <button class="freshness-check" id="check-freshness" type="button">最新状態を再確認</button>
+      </footer>
     </main>`;
 
   const sources = new Map<string, ImageSource>();
@@ -85,12 +89,17 @@ export function startApp(root: HTMLElement): void {
   const missingSummary = query<HTMLDivElement>(root, '#missing-summary');
   const previewWrap = query<HTMLDivElement>(root, '#preview-wrap');
   const downloadButton = query<HTMLButtonElement>(root, '#download');
+  const freshnessStatus = query<HTMLSpanElement>(root, '#freshness-status');
+  const freshnessButton = query<HTMLButtonElement>(root, '#check-freshness');
   let activeSource: ImageSource | null = null;
   let selection: { x: number; y: number; width: number; height: number } | null = null;
   let dragStart: { x: number; y: number } | null = null;
   let generation = 0;
 
   rankSelect.innerHTML = Array.from({ length: LAST_RANK }, (_, index) => `<option value="${index + 1}">${index + 1}位</option>`).join('');
+
+  freshnessButton.addEventListener('click', () => void checkFreshness());
+  void checkFreshness();
 
   input.addEventListener('change', () => {
     if (input.files) addFiles(input.files);
@@ -370,8 +379,42 @@ export function startApp(root: HTMLElement): void {
     return `${latest.getFullYear()}-${pad(latest.getMonth() + 1)}-${pad(latest.getDate())}_${pad(latest.getHours())}${pad(latest.getMinutes())}${pad(latest.getSeconds())}`;
   }
 
+  async function checkFreshness(): Promise<void> {
+    freshnessButton.disabled = true;
+    freshnessStatus.textContent = 'GitHubの最新コミットを確認中…';
+    freshnessStatus.dataset.state = 'checking';
+    try {
+      const response = await fetch(`${import.meta.env.BASE_URL}version.json?ts=${Date.now()}`, {
+        cache: 'no-store',
+      });
+      if (!response.ok) throw new Error(`Version metadata returned ${response.status}`);
+      const latest = await response.json() as { commit?: unknown };
+      if (typeof latest.commit !== 'string') throw new Error('Version metadata did not include a commit SHA');
+      if (latest.commit.startsWith(__APP_COMMIT__)) {
+        freshnessStatus.textContent = '公開中の最新版です';
+        freshnessStatus.dataset.state = 'current';
+      } else {
+        freshnessStatus.textContent = `新しい公開版があります（${latest.commit.slice(0, 12)}）`;
+        freshnessStatus.dataset.state = 'outdated';
+      }
+    } catch {
+      freshnessStatus.textContent = '最新状態を確認できません（通信後に再確認してください）';
+      freshnessStatus.dataset.state = 'unknown';
+    } finally {
+      freshnessButton.disabled = false;
+    }
+  }
+
   renderSources();
   renderEntries();
+}
+
+function formatBuildTime(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'コミット日時不明';
+  return new Intl.DateTimeFormat('ja-JP', {
+    dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Tokyo',
+  }).format(date);
 }
 
 function query<T extends Element>(root: ParentNode, selector: string): T {
