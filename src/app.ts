@@ -7,6 +7,12 @@ import { LAST_RANK, type ImageSource, type RankingEntry } from './types/ranking'
 
 const DUPLICATE_SIMILARITY = 0.97;
 
+declare global {
+  interface Window {
+    __formatterBatchCompose?: (cards: Array<{ name: string; rank: number; dataUrl: string }>) => Promise<{ rankCount: number }>;
+  }
+}
+
 export function startApp(root: HTMLElement): void {
   root.innerHTML = `
     <main class="page-shell">
@@ -81,6 +87,42 @@ export function startApp(root: HTMLElement): void {
   const freshnessButton = query<HTMLButtonElement>(root, '#check-freshness');
   let generation = 0;
   let previewGeneration = 0;
+
+  if (new URLSearchParams(window.location.search).has('batch')) {
+    window.__formatterBatchCompose = async (cards) => {
+      const batchEntries = new Map<number, RankingEntry>();
+      const cropUrls: string[] = [];
+      try {
+        for (const card of cards) {
+          if (!Number.isInteger(card.rank) || card.rank < 1 || card.rank > LAST_RANK || batchEntries.has(card.rank)) {
+            throw new Error(`順位${card.rank}位を登録できません。`);
+          }
+          const response = await fetch(card.dataUrl);
+          if (!response.ok) throw new Error(`順位${card.rank}位の画像を読み込めませんでした。`);
+          const crop = await response.blob();
+          const cropUrl = URL.createObjectURL(crop);
+          cropUrls.push(cropUrl);
+          batchEntries.set(card.rank, {
+            id: `batch-${card.rank}`, rank: card.rank, sourceId: card.name, sourceName: card.name,
+            capturedAt: null, crop, cropUrl, quality: crop.size, confidence: 1, duplicateCount: 1,
+          });
+        }
+        const canvas = await composeRanking(batchEntries);
+        const blob = await canvasToPng(canvas);
+        canvas.width = 0;
+        canvas.height = 0;
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = `priconne_clan_ranking_${filenameDate()}.png`;
+        anchor.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        return { rankCount: batchEntries.size };
+      } finally {
+        for (const url of cropUrls) URL.revokeObjectURL(url);
+      }
+    };
+  }
 
   freshnessButton.addEventListener('click', () => void checkFreshness());
   void checkFreshness();
